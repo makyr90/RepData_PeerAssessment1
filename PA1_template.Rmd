@@ -1,25 +1,165 @@
----
-title: "Reproducible Research: Peer Assessment 1"
-output: 
-  html_document:
-    keep_md: true
----
+<title> 1st Peer Assignement </title>
+<font color="blue">Reproducible Reacearh Peer assesment 1 </font>
+=================================================================
+
+<br>
+
+**Load Activity Monitoring dataset**  
+
+```{r read data,echo=TRUE,}
+mydata <- read.csv("activity.csv",header = TRUE)
+```
+**Total number of steps taken each day**  
+
+```{r plot histogram,echo =TRUE,fig.height=10,fig.align='center'}
+stepsperDay<-tapply(mydata$steps,mydata$date,sum,na.rm=TRUE)
+stepsperDaydf<-data.frame(Date=names(stepsperDay),Total.Steps=stepsperDay)
+ExclNA_stepsperDaydf<-stepsperDaydf[which(stepsperDaydf$Total.Steps>0),]
+par(mar=c(0,5,1,2))
+par(las=2)
+x<-barplot(ExclNA_stepsperDaydf$Total.Steps,horiz=TRUE,names.arg=ExclNA_stepsperDaydf$Date,cex.names=0.7,
+main ="Total Steps per Day",col="red", xaxt="n",)
+text(x= ExclNA_stepsperDaydf$Total.Steps+750, y= x, labels=as.character(ExclNA_stepsperDaydf$Total.Steps),
+cex=0.7,xpd=TRUE)
 
 
-## Loading and preprocessing the data
+```
+<br>
+**Mean and Median of steps taken each day** 
 
+```{r mean & Median table,echo=TRUE, results='asis',warning=FALSE}
+MeanstepsperDay<-tapply(mydata$steps,mydata$date,mean)
+MeanstepsperDaydf<-data.frame(Date=names(MeanstepsperDay),Mean.Steps=MeanstepsperDay)
+MeanExclNAN_stepsperDaydf<-MeanstepsperDaydf[which(!(is.na(MeanstepsperDaydf$Mean.Steps))),]
+MedianstepsperDay<-tapply(mydata$steps,mydata$date,median)
+MedianstepsperDaydf<-data.frame(Date=names(MedianstepsperDay),Median.Steps=MedianstepsperDay)
+MedianExclNAN_stepsperDaydf<-MedianstepsperDaydf[which(!(is.na(MedianstepsperDaydf$Median.Steps))),]
+TableData<-merge(x = MeanExclNAN_stepsperDaydf, y = MedianExclNAN_stepsperDaydf, by = "Date", all = TRUE)
+library(xtable)
+xt<-xtable(TableData)
+print(xt,type="html", include.rownames = FALSE)
+```
 
+<br>
+**Average steps per 5-minute Interval**
+```{r Avg steps per Interval,echo=TRUE,fig.height=4,fig.align='center'}
+MeanInterval<-tapply(mydata$steps,mydata$interval,mean,na.rm=TRUE)
+MeanIntervaldf <-data.frame(Interval=names(MeanInterval),Mean.Steps=MeanInterval) 
+MeanIntervaldf$Interval<-as.character(MeanIntervaldf$Interval)
+plot(MeanIntervaldf$Interval,MeanIntervaldf$Mean.Steps,type="l",col="red",axes=FALSE, xaxt="n",ann=FALSE)
+axis(1, at = seq(0, 2250, by = 250), las=2)
+axis(2, las=1)
+box()
+title(main="Average Steps per each Interval", col.main="black", font.main=4)
+title(xlab="5-Minute Interval")
+title(ylab="Average Steps")
+```
+<br>
+**5-minute Interval with max average steps**
+```{r max average steps Interval,echo=TRUE,comment=NA}
+MeanIntervaldf2<-MeanIntervaldf[order(MeanIntervaldf$Mean.Steps, decreasing = TRUE),]
+MeanIntervaldf2$Interval[1]
+```
+<br>
+**Total number of dataset NA rows**
+```{r NA Number,echo=TRUE,comment=NA}
+length(which(is.na(mydata)))
+```
+<br>
+**Replication of original dataset and treatment of  NA values**  
+-1st aproach in order to treat NAs is to replace them with the mean
+value of the subsequent day.
+```{r treat NAs 1st,echo=TRUE}
+mydataTreatNa<-mydata
+for (x in 1:nrow(mydataTreatNa)){
+        if (is.na(mydataTreatNa[x,1])){
+            mydataTreatNa[x,1]<- MeanstepsperDaydf$Mean.Steps[which(
+                    MeanstepsperDaydf$Date==mydataTreatNa[x,2])]    
+        }
+}
+```
+<br>
+**Check the results of the above aproach for NAs treatment**
+```{r check NAs Aproach,echo=TRUE,comment=NA}
+length(which(is.na(mydataTreatNa)))
+```
+<br>
+**There is no change in terms of NAs substitution**  
+This means that  the NA values derives from Dates where all of its observation on the  steps variable are NAs
+<br>
+-2nd aproach is the replacement of NA values with the mean value of the  
+subsequent intervall in which belong
+```{r treat NAs 2nd,echo=TRUE}
+for (x in 1:nrow(mydataTreatNa)){
+        if (is.na(mydataTreatNa[x,1])){
+            mydataTreatNa[x,1]<- MeanIntervaldf$Mean.Steps[which(
+                    MeanIntervaldf$Interval==mydataTreatNa[x,3])]    
+        }
+}
+```
+<br>
+**Check the results of the 2nd aproach for NAs treatment**
+```{r check NAs 2nd Aproach,echo=TRUE,comment=NA}
+length(which(is.na(mydataTreatNa)))
+```
+**All the NA values have successfully substituted in our new dataset**
+<br>
+<br>
+**Total number of steps taken each day(NAs treated dataset)**  
 
-## What is mean total number of steps taken per day?
+```{r plot sbst NAS histogram,echo =TRUE,fig.height=10,fig.align='center'}
+stepsperDay<-tapply(mydataTreatNa$steps,mydataTreatNa$date,sum,na.rm=TRUE)
+stepsperDaydf<-data.frame(Date=names(stepsperDay),Total.Steps=stepsperDay)
+par(mar=c(0,5,1,2))
+par(las=2)
+x<-barplot(stepsperDaydf$Total.Steps,horiz=TRUE,names.arg=stepsperDaydf$Date,cex.names=0.7,
+main ="Total Steps per Day",col="blue", xaxt="n",)
+text(x= stepsperDaydf$Total.Steps+750, y= x, labels=as.character(round(stepsperDaydf$Total.Steps,0)),
+cex=0.7,xpd=TRUE)
 
+```
+<br>
+**Mean and Median of steps taken each day(NAs treated dataset)** 
 
+```{r mean & Median table sbst NAs,echo=TRUE, results='asis',warning=FALSE}
+MeanstepsperDay<-tapply(mydataTreatNa$steps,mydataTreatNa$date,mean)
+MeanstepsperDaydf<-data.frame(Date=names(MeanstepsperDay),Mean.Steps=MeanstepsperDay)
+MedianstepsperDay<-tapply(mydataTreatNa$steps,mydataTreatNa$date,median)
+MedianstepsperDaydf<-data.frame(Date=names(MedianstepsperDay),Median.Steps=MedianstepsperDay)
+TableData<-merge(x = MeanstepsperDaydf, y = MedianstepsperDaydf, by = "Date", all = TRUE)
+library(xtable)
+xt<-xtable(TableData)
+print(xt,type="html", include.rownames = FALSE)
+```
+<br>
+<font color="red"> <b>Impact of imputing missing data on the above estimates:</b></font>
+<br>
+-On the total steps per day histogram, the only difference from the  initial histogram(without imputing the NA values) is the presence  of some more days which have excluded from the initial histogram  due to the fact that the subsequent number of total steps for that days  was NA. On the current histogram the value for that days is the summary  of the mean of each interval across all the days.
+<br>
+-On the mean and median report, the only difference is also the presence of some more days which have excluded from the initial report  due to the fact that the subsequent number of mean and median total steps for that days  was NA. On the current report the mean value for that days is the mean among the means of all the Intervals and the median is the median among all the means off all Intervals. The fact that the median has zero value among the most days is normal due to the fact that over the half of variable steps observations have the zero as value.
+<br>
+```{r zero value proportion,echo=TRUE,comment=NA}
+paste(round((length(which(mydataTreatNa$steps==0))/nrow(mydataTreatNa) *100),0), "%", sep="")
 
-## What is the average daily activity pattern?
-
-
-
-## Imputing missing values
-
-
-
-## Are there differences in activity patterns between weekdays and weekends?
+```
+<br>
+**Create a new factor variable in the dataset with two levels – “Weekday” and “weekend” indicating whether a given date is a weekday or Weekend day**
+```{r WeakDayFactor,echo=TRUE,results='hide'}
+mydataTreatNa$date<-as.Date(mydataTreatNa$date, format = "%Y-%m-%d")
+Sys.setlocale("LC_TIME", "English")
+mydataTreatNa$WeakDay<-weekdays(mydataTreatNa$date)
+mydataTreatNa$WeakdayFactor<-ifelse(mydataTreatNa$WeakDay=="Monday"|
+mydataTreatNa$WeakDay=="Tuesday" |mydataTreatNa$WeakDay=="Wednesday" |
+mydataTreatNa$WeakDay=="Thursday" | mydataTreatNa$WeakDay=="Friday" , 
+"Weekday","Weekend")
+```
+<br>
+**Reshape data and plot a time series(lattice) of the 5-minute interval (x-axis) and the average number of steps taken, averaged across all weekday days or weekend days (y-axis)**
+```{r lattice plot,echo=TRUE,fig.align='center',fig.height=6}
+library(reshape2)
+MeltData<-melt(mydataTreatNa,id=c(3,5),measure.vars = 1)
+plotdata<-dcast(MeltData,interval+WeakdayFactor~variable,mean)
+library(lattice)
+xyplot(steps ~ interval | WeakdayFactor, data = plotdata,type="l",  
+layout = c(1, 2),xlab="Interval",ylab="Number of steps")
+```
